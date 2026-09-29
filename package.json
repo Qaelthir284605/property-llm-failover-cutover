@@ -1,0 +1,20 @@
+{
+  "name": "property-llm-failover-cutover",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --import tsx",
+    "demo": "tsx src/run_property_cutover.ts"
+  },
+  "dependencies": {
+    "openai": "^4.56.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "tsx": "^4.17.1",
+    "typescript": "^5.5.4",
+    "@types/node": "^22.5.4"
+  }
+}
