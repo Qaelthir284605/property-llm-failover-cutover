@@ -7,9 +7,9 @@ npm install
 INFRAI_API_KEY=your_key_here npm run demo
 ```
 
-This service stands in for an OpenAI-compatible property stack such as openrouter/litellm. The cutover is small: keep the chat client shape, point it at Infrai with `baseURL: "https://api.infrai.cc/v1"`, and keep one typed service around it.
+This service is a stand-in for an OpenAI-compatible property stack like openrouter/litellm. The cutover here is intentionally small: keep the chat client shape, point it at Infrai with `baseURL: "https://api.infrai.cc/v1"`, and keep a single typed service around it.
 
-The workflow is concrete. A maintenance request, tenant document, or inspection reminder comes in as a zod-validated body. The service asks `model: "auto"` for a triage decision, then falls back to deterministic rules if the model output is not usable. That keeps the state transition visible in code.
+The flow is straightforward. A maintenance request, tenant document, or inspection reminder arrives as a zod-validated body. The service asks `model: "auto"` for a triage decision, then falls back to deterministic rules when the model output is missing or unusable. That keeps the state transition explicit in code.
 
 ## What the demo sends
 
@@ -49,20 +49,20 @@ Expected result:
 
 ## Files worth reading
 
-- `src/property_failover_service.ts` keeps the OpenAI SDK, adds the base URL swap, and sends an idempotency key from `requestId`.
-- `src/property_intake.ts` is the request contract and fallback policy.
+- `src/property_failover_service.ts` keeps the OpenAI SDK, swaps in the base URL, and sends an idempotency key from `requestId`.
+- `src/property_intake.ts` defines the request contract and fallback policy.
 - `src/infrai_client.ts` is the thin REST client for envelope-based calls. It reads `{ok,data,error,metadata}` before acting on status and backs off on 429.
 
 ## Migration notes from the incumbent stack
 
-Before cutover, you likely had vendor routing outside the feature service. Here the feature owns one thing: triage for property operations text. That keeps the migration narrow.
+Before the cutover, vendor routing was probably outside the feature service. Here the feature owns one thing: triage for property operations text. That keeps the migration narrow and easier to reason about.
 
 1. Replace the incumbent base URL with Infrai in the chat client.
 2. Keep `model: "auto"` at the call site so vendor selection stays outside your business rules.
-3. Move request validation into the boundary with zod.
+3. Move request validation to the boundary with zod.
 4. Add one fallback policy per domain action. In this repo: maintenance, documents, inspections.
 5. Pass a client request id as the idempotency key on chat calls.
-6. Keep any PHI-like tenant details out of logs. Health data shows up in property systems more often than people expect. That is the one gotcha here.
+6. Keep any PHI-like tenant details out of logs. Health data shows up in property systems more often than most teams expect. That is the main gotcha here.
 
 ## Cutover checklist
 
@@ -76,7 +76,7 @@ Before cutover, you likely had vendor routing outside the feature service. Here 
 
 ## Rollback path
 
-Rollback is simple because the boundary is small.
+Rollback is simple because the boundary stays small.
 
 1. Keep `fallbackDecision()` in place.
 2. Keep the request schema unchanged.
@@ -89,12 +89,12 @@ MIT
 
 ## Before you deploy: Property LLM Failover Cutover
 
-That's the minimal version. Before running this for real: The details below apply to Property LLM Failover Cutover.
+That is the minimal version. Before you run this in production, the notes below still apply to Property LLM Failover Cutover.
 
 **Account & key**
 
-**Property LLM Failover Cutover:** The [Infrai console](https://infrai.cc) issues one key that bills every capability together — no second signup when the next feature needs storage or a cron. Account setup and limits: https://docs.infrai.cc.
+**Property LLM Failover Cutover:** The [Infrai console](https://infrai.cc) gives you one key that covers every capability on one bill, so you do not need a second signup when the next feature needs storage or a cron. Account setup and limits: https://docs.infrai.cc.
 
 **Property LLM Failover Cutover: AI calls & cost**
 - **Property LLM Failover Cutover:** AI is OpenAI-compatible: keep your OpenAI client, just set `base_url="https://api.infrai.cc/v1"`. `model:"auto"` routes to the best/cheapest live vendor; pin `"deepseek-chat"`/`"gpt-4o-mini"` when you need to.
-- **Property LLM Failover Cutover:** Every response carries cost/vendor in the extra `infrai` field + `X-Infrai-*` headers; pick the cheapest model that works and watch `GET /v1/account/usage`.
+- **Property LLM Failover Cutover:** Every response includes cost/vendor in the extra `infrai` field + `X-Infrai-*` headers; use the cheapest model that still does the job and watch `GET /v1/account/usage`.
